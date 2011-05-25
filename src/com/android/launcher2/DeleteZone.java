@@ -146,9 +146,11 @@ public class DeleteZone extends ImageView implements DropTarget, DragController.
 
     public void onDragEnter(DragSource source, int x, int y, int xOffset, int yOffset,
             DragView dragView, Object dragInfo) {
+		mTransition.reverseTransition(TRANSITION_DURATION);
 		final ItemInfo item = (ItemInfo) dragInfo;
-		if (item instanceof ApplicationInfo) {
-			mTransition.reverseTransition(TRANSITION_DURATION);
+		if (item instanceof ApplicationInfo ||
+		    item instanceof ShortcutInfo)
+        {
 			mUninstallTarget = true;
 			mHandler.removeCallbacks(mShowUninstaller);
 			mHandler.postDelayed(mShowUninstaller, 1000);
@@ -186,7 +188,12 @@ public class DeleteZone extends ImageView implements DropTarget, DragController.
             mHandle.startAnimation(mHandleOutAnimation);
             setVisibility(VISIBLE);
 			try {
-				final ApplicationInfo appInfo = (ApplicationInfo) item;
+				ShortcutInfo appInfo = null;
+				try {
+				    appInfo = (ShortcutInfo)item;   
+				} catch (ClassCastException e) {
+				    appInfo = ((ApplicationInfo)item).makeShortcut();
+				}
 				PackageManager mgr = DeleteZone.this.getContext().getPackageManager();
 				ResolveInfo res = mgr.resolveActivity(appInfo.intent, 0);
 				mUninstallPkg = res.activityInfo.packageName;
