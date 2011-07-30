@@ -71,6 +71,8 @@ public class DeleteZone extends ImageView implements DropTarget, DragController.
     private boolean mUninstallTarget = false;
     private String  mUninstallPkg = null;
 
+    private final Vibrator mVibrator = new Vibrator();
+
     public DeleteZone(Context context, AttributeSet attrs) {
         this(context, attrs, 0);
     }
@@ -303,6 +305,7 @@ public class DeleteZone extends ImageView implements DropTarget, DragController.
 			mShouldUninstall = mUninstallTarget;
 			CharSequence msg = mContext.getString(R.string.drop_to_uninstall);
 			if(mShouldUninstall) {
+				mVibrator.vibrate(35);
 				Toast.makeText(mContext, msg, 500).show();
 			}
 		}
