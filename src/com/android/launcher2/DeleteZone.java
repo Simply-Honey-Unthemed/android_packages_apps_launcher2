@@ -40,6 +40,7 @@ import android.view.animation.AccelerateInterpolator;
 import android.view.animation.AlphaAnimation;
 import android.graphics.RectF;
 import android.graphics.drawable.TransitionDrawable;
+import android.os.Vibrator;
 
 import com.android.launcher.R;
 
