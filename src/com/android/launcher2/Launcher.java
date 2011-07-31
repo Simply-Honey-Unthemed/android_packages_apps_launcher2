@@ -1203,7 +1203,7 @@ public final class Launcher extends Activity
     }
 
     private void manageApps() {
-        startActivity(new Intent(android.provider.Settings.ACTION_MANAGE_ALL_APPLICATIONS_SETTINGS));
+        startActivity(new Intent("android.settings.RUNNING_SERVICES_SETTINGS"));
     }
 
     void addAppWidget(Intent data) {
