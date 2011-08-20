@@ -21,6 +21,7 @@ import com.android.common.Search;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
+import android.app.PendingIntent;
 import android.app.SearchManager;
 import android.app.StatusBarManager;
 import android.app.WallpaperManager;
@@ -33,6 +34,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.Intent.ShortcutIconResource;
 import android.content.IntentFilter;
+import android.content.IntentFilter.MalformedMimeTypeException;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
@@ -58,6 +60,7 @@ import android.text.SpannableStringBuilder;
 import android.text.TextUtils;
 import android.text.method.TextKeyListener;
 import android.util.Log;
+import android.util.Slog;
 import android.view.Display;
 import android.view.HapticFeedbackConstants;
 import android.view.KeyEvent;
@@ -164,8 +167,6 @@ public final class Launcher extends Activity
     private static final Object sLock = new Object();
     private static int sScreen = DEFAULT_SCREEN;
 
-    private final BroadcastReceiver mCloseSystemDialogsReceiver
-            = new CloseSystemDialogsIntentReceiver();
     private final ContentObserver mWidgetObserver = new AppWidgetResetObserver();
 
     private LayoutInflater mInflater;
@@ -216,6 +217,10 @@ public final class Launcher extends Activity
     private Drawable[] mHotseatIcons = null;
     private CharSequence[] mHotseatLabels = null;
 
+    private static final String DATA_TYPE_TMOBILE_STYLE = "vnd.tmobile.cursor.item/style";
+    private static final String DATA_TYPE_TMOBILE_THEME = "vnd.tmobile.cursor.item/theme";
+    private static final String ACTION_TMOBILE_THEME_CHANGED = "com.tmobile.intent.action.THEME_CHANGED";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -261,7 +266,16 @@ public final class Launcher extends Activity
         Selection.setSelection(mDefaultKeySsb, 0);
 
         IntentFilter filter = new IntentFilter(Intent.ACTION_CLOSE_SYSTEM_DIALOGS);
-        registerReceiver(mCloseSystemDialogsReceiver, filter);
+        registerReceiver(mBroadcastReceiver, filter);
+
+        try {
+            IntentFilter tMoFilter = new IntentFilter(ACTION_TMOBILE_THEME_CHANGED);
+            tMoFilter.addDataType(DATA_TYPE_TMOBILE_THEME);
+            tMoFilter.addDataType(DATA_TYPE_TMOBILE_STYLE);
+            registerReceiver(mBroadcastReceiver, tMoFilter);
+        } catch (MalformedMimeTypeException e) {
+            Slog.e(TAG, "Could not set T-Mo mime types", e);
+        }
     }
 
     private void checkForLocaleChange() {
@@ -1068,8 +1082,6 @@ public final class Launcher extends Activity
         
         dismissPreview(mPreviousView);
         dismissPreview(mNextView);
-
-        unregisterReceiver(mCloseSystemDialogsReceiver);
     }
 
     @Override
@@ -2093,23 +2105,24 @@ public final class Launcher extends Activity
         }
     }
 
-    /**
-     * Receives notifications when applications are added/removed.
-     */
-    private class CloseSystemDialogsIntentReceiver extends BroadcastReceiver {
-        @Override
+    private BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
-            closeSystemDialogs();
-            String reason = intent.getStringExtra("reason");
-            if (!"homekey".equals(reason)) {
-                boolean animate = true;
-                if (mPaused || "lock".equals(reason)) {
-                    animate = false;
+            String action = intent.getAction();
+            if (Intent.ACTION_CLOSE_SYSTEM_DIALOGS.equals(action)) {
+                closeSystemDialogs();
+                String reason = intent.getStringExtra("reason");
+                if (!"homekey".equals(reason)) {
+                    boolean animate = true;
+                    if (mPaused || "lock".equals(reason)) {
+                        animate = false;
+                    }
+                    closeAllApps(animate);
                 }
-                closeAllApps(animate);
+            } else if (ACTION_TMOBILE_THEME_CHANGED.equals(action)) {
+                android.os.Process.killProcess(android.os.Process.myPid());
             }
         }
-    }
+    };
 
     /**
      * Receives notifications whenever the appwidgets are reset.
